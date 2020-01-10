@@ -21,35 +21,25 @@ const usePrevious = value => {
   return ref.current;
 };
 
-const sortTokens = tokens => tokens.sort((a, b) => (a.tokenId > b.tokenId ? 1 : -1));
+const sortTokens = tokens => tokens;
 
 const updateTokensInfo = async (slpAddress, tokens = [], setTokens) => {
   let infos = [];
 
   try {
     infos = await getTokenInfo(slpAddress, tokens.map(token => token.tokenId));
-  } catch (err) {
-    console.log(err.message);
-  }
-
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-
-    if (!token.info) {
-      try {
-        const info = infos.find(i => i.tokenIdHex === token.tokenId);
-
-        tokens[i] = {
-          ...token,
+    infos.forEach(info => {
+      let index = tokens.findIndex(token => token.tokenId === info.tokenIdHex);
+      if (index !== -1) {
+        tokens[index] = {
+          ...tokens[index],
           info
         };
-        tokensCache[token.tokenId] = tokens[i];
+        tokensCache[tokens[index].tokenId] = tokens[index];
         setTokens(sortTokens([...tokens]));
-      } catch (err) {
-        console.error(err.message);
       }
-    }
-  }
+    });
+  } catch (err) {}
 };
 
 const update = async ({ wallet, tokens, setBalances, setTokens }) => {

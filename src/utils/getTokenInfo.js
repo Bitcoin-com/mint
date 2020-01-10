@@ -17,18 +17,23 @@ const getTokenInfo = async (SLP, slpAddress, tokenIds) => {
     const slpDbInstance = SLP.SLPDB;
     const queryResults = await slpDbInstance.get(query);
     const queryResultsForGenesisTransaction = await SLP.Transaction.details(
-      queryResults.t
-        .filter(t => t.mintBatonUtxo && t.mintBatonUtxo.replace(":2", ""))
-        .map(t => t.mintBatonUtxo.replace(":2", ""))
+      queryResults.t.filter(t => t.mintBatonUtxo).map(t => t.mintBatonUtxo.replace(":2", ""))
     );
-    return tokenIds.map((r, i) => ({
-      ...queryResults.t[i].tokenDetails,
-      hasBaton:
-        queryResultsForGenesisTransaction[i] &&
-        queryResultsForGenesisTransaction[i].vin &&
-        SLP.Address.toSLPAddress(queryResultsForGenesisTransaction[i].vin[0].cashAddress) ===
-          slpAddress
-    }));
+    return tokenIds.map((r, i) => {
+      const queryResult = queryResults.t[i];
+      const genesisTransactionDetails = queryResult.mintBatonUtxo
+        ? queryResultsForGenesisTransaction.find(
+            tx => tx.txid === queryResult.mintBatonUtxo.replace(":2", "")
+          )
+        : null;
+      return {
+        ...queryResult.tokenDetails,
+        hasBaton:
+          genesisTransactionDetails &&
+          genesisTransactionDetails.vin &&
+          SLP.Address.toSLPAddress(genesisTransactionDetails.vin[0].cashAddress) === slpAddress
+      };
+    });
   } catch (e) {
     return [];
   }
